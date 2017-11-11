@@ -5,12 +5,11 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.Scanner;
 
 public class QuadraticSieve {
 
-	int L = 100;
+	int L = 1024;
 	ArrayList<Integer> F = new ArrayList<Integer>();
 
 	int[][] binaryMatrix;
@@ -42,12 +41,10 @@ public class QuadraticSieve {
 			}
 			in.close();
 		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		System.out.println(F);
 
-		binaryMatrix = new int[L][F.size()];
 		factorCount = new int[L][F.size()];
 		// test selected numbers r = floor(sqrt(k * N)) + j for k=1,2,..
 		// j=1,2,..
@@ -58,11 +55,8 @@ public class QuadraticSieve {
 		// long r_limit = 10000000;
 
 		int chunk = 1000;
-		int current = 0;
-		int jMax = chunk;
-		int kMax = chunk;
-		BigInteger N = new BigInteger("323");
-		LinkedList<Long> rList = new LinkedList<Long>();
+		BigInteger N = new BigInteger("3205837387");
+		ArrayList<Long> rList = new ArrayList<Long>();
 		long oldMax = 1;
 		long newMax = 1;
 		// set oldmax to 0; newmax = 0;
@@ -82,6 +76,7 @@ public class QuadraticSieve {
 					// if y is b-smooth, add y to r list
 					if (isSmooth(F.size(), y)) {
 						rValueCount++;
+						rList.add(y.longValue());
 						if (rValueCount == L)
 							break;
 					}
@@ -102,6 +97,7 @@ public class QuadraticSieve {
 					// if y is b-smooth, add y to r list
 					if (isSmooth(F.size(), y)) {
 						rValueCount++;
+						rList.add(y.longValue());
 						if (rValueCount == L)
 							break;
 					}
@@ -116,18 +112,19 @@ public class QuadraticSieve {
 		for (int i = 0; i < factorCount.length; i++) {
 			for (int j = 0; j < factorCount[0].length; j++) {
 				b.append(factorCount[i][j]);
-				if(j == factorCount[0].length - 1)
+				if (j == factorCount[0].length - 1)
 					b.append("\n");
 				else
 					b.append(" ");
 			}
 		}
-		//System.out.println("output string: " + b);
+		// System.out.println("output string: " + b);
 		BufferedWriter bw = null;
 		try {
-			
+
 			bw = new BufferedWriter(new FileWriter("output.txt"));
 			bw.write(b.toString());
+			bw.close();
 			System.out.println("Generated factor matrix.");
 			ProcessBuilder pb = new ProcessBuilder("GaussBin.exe", "output.txt", "binMat.txt");
 			Process p = pb.start();
@@ -148,34 +145,53 @@ public class QuadraticSieve {
 		}
 		int numSolutions = Integer.parseInt(reader.nextLine());
 		System.out.println(numSolutions);
-		BigInteger sum = new BigInteger("0");
 		int solutionsTried = 0;
-		System.out.println(reader.nextLine());
-		System.out.println(reader.nextLine());
-		System.out.println(reader.nextLine());
-		String[] vals = reader.nextLine().split(" ");
-		System.out.println(vals.length);
-//		while(solutionsTried < numSolutions){
-//			for (int i = 0; i < binaryMatrix.length; i++) {
-//				String[] vals = reader.nextLine().split(" ");
-//				for (int j = 0; j < binaryMatrix[0].length; j++) {
-//					BigInteger curr = new BigInteger(vals[j]).pow(factorCount[i][j]);
-//					sum = sum.add(curr);
-//				}
-//				System.out.println(sum);
-//				sum = BigInteger.ZERO;
-//			}
-//			solutionsTried++;
-//		}
-//		
-		
-			
-		
-		
-		
-		//output to file here
+		int[] solution = new int[2];
+		boolean solutionFound = false;
+
+		while (solutionsTried < numSolutions) {
+			System.out.println("Tried: " + solutionsTried);
+			String[] vals = reader.nextLine().split(" ");
+			BigInteger RHS = BigInteger.ONE;
+			BigInteger LHS = BigInteger.ONE;
+			int[] totalFactors = new int[F.size()];
+			for (int i = 0; i < vals.length; i++) {
+				if (vals[i].equals("1")) {
+					// add current row of factors into the total
+					for (int k = 0; k < factorCount[i].length; k++) {
+						totalFactors[k] += factorCount[i][k];
+					}
+					LHS = LHS.multiply(BigInteger.valueOf(rList.get(i)));
+				}
+			}
+			for (int k = 0; k < totalFactors.length; k++) {
+				int power = totalFactors[k] % 2 == 0 ? totalFactors[k] / 2 : totalFactors[k];
+
+				RHS = RHS.multiply(BigInteger.valueOf((long) Math.pow(F.get(k), power)));
+
+			}
+			System.out.println("LHS: " + LHS + " RHS: " + RHS);
+
+			// calculate gcd
+			int gcd = N.gcd(LHS.subtract(RHS)).intValue();
+			if (gcd != 1) {
+				solution[0] = gcd;
+				solution[1] = N.divide(BigInteger.valueOf(gcd)).intValue();
+				solutionFound = true;
+				break;
+			}
+			solutionsTried++;
+		}
+		if(!solutionFound)
+			System.out.println("No Solution Found. :(");
+		else
+			System.out.printf("The factors of %s are %d and %d\n",N.toString(), solution[0], solution[1] );
+		//
+		reader.close();
+
+		// output to file here
 		// current += chunk;
-		System.out.println("Time taken: " + (System.currentTimeMillis() - start)/1000 + "s");
+		System.out.println("Time taken: " + (System.currentTimeMillis() - start) / 1000 + "s");
 	}
 
 	/**
@@ -187,8 +203,7 @@ public class QuadraticSieve {
 	 * @return
 	 */
 	public boolean isSmooth(int B, BigInteger y) {
-		System.out.println("smooth criminal");
-		// current factor we are checking
+		//System.out.println("smooth criminal");
 
 		// while number is divisible by prime factors, fill up array
 		for (int j = 0; j < F.size(); j++) {
@@ -198,7 +213,7 @@ public class QuadraticSieve {
 			while (y.remainder(divisor).intValue() == 0) {
 				factorCount[rValueCount][j]++;
 				y = y.divide(divisor);
-				System.out.println("current y: " + y);
+				//System.out.println("current y: " + y);
 			}
 			if (y.intValue() != 1) {
 				if (j == F.size() - 1) {
@@ -207,14 +222,14 @@ public class QuadraticSieve {
 					 * reset factor array and return false
 					 */
 					for (int i = 0; i < factorCount[rValueCount].length; i++) {
-						factorCount[rValueCount][i] = 0;
+						factorCount[rValueCount][(int) i] = 0;
 					}
 					return false;
 				}
 
 			} else {
 				// rValueCount++;
-				System.out.println("Added an r-value. Count: " + rValueCount);
+				System.out.println("Added an r-value. Count: " + rValueCount + "***************************************************************");
 				return true;
 			}
 
