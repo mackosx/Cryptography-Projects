@@ -55,7 +55,7 @@ public class QuadraticSieve {
 		// long r_limit = 10000000;
 
 		int chunk = 1000;
-		BigInteger N = new BigInteger("3205837387");
+		BigInteger N = new BigInteger("392742364277");
 		ArrayList<Long> rList = new ArrayList<Long>();
 		long oldMax = 1;
 		long newMax = 1;
@@ -146,7 +146,7 @@ public class QuadraticSieve {
 		int numSolutions = Integer.parseInt(reader.nextLine());
 		System.out.println(numSolutions);
 		int solutionsTried = 0;
-		int[] solution = new int[2];
+		long[] solution = new long[2];
 		boolean solutionFound = false;
 
 		while (solutionsTried < numSolutions) {
@@ -161,19 +161,22 @@ public class QuadraticSieve {
 					for (int k = 0; k < factorCount[i].length; k++) {
 						totalFactors[k] += factorCount[i][k];
 					}
-					LHS = LHS.multiply(BigInteger.valueOf(rList.get(i)));
+					// multiply in the current prime raised to the power
+					LHS = LHS.multiply(BigInteger.valueOf(rList.get(i))).mod(N);
 				}
 			}
+			System.out.println();
 			for (int k = 0; k < totalFactors.length; k++) {
-				int power = totalFactors[k] % 2 == 0 ? totalFactors[k] / 2 : totalFactors[k];
-
-				RHS = RHS.multiply(BigInteger.valueOf((long) Math.pow(F.get(k), power)));
-
+				int power = totalFactors[k]/2;//totalFactors[k] % 2 == 0 ? totalFactors[k] / 2 : totalFactors[k];
+				System.out.printf(power + " ");
+				RHS = RHS.multiply(BigInteger.valueOf(F.get(k)).pow(power)).mod(N);
+				
 			}
-			System.out.println("LHS: " + LHS + " RHS: " + RHS);
+			System.out.println();
+			System.out.println("LHS: " + LHS + "\nRHS: " + RHS);
 
 			// calculate gcd
-			int gcd = N.gcd(LHS.subtract(RHS)).intValue();
+			long gcd = N.gcd(LHS.subtract(RHS)).intValue();
 			if (gcd != 1) {
 				solution[0] = gcd;
 				solution[1] = N.divide(BigInteger.valueOf(gcd)).intValue();
