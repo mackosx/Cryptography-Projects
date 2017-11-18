@@ -5,17 +5,24 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Scanner;
 
 public class QuadraticSieve {
-
-	int L = 1024;
-	ArrayList<Integer> F = new ArrayList<Integer>();
+	// L = 2^10
+	int L = (int) Math.pow(2, 10);
+	int factorBase = L - 5;
+	// Factor base containing all primes we need
+	ArrayList<Integer> F = new ArrayList<Integer>(factorBase);
+	// Hash for keeping track of duplicates
+	HashSet<String> M = new HashSet<String>();
 
 	int[][] binaryMatrix;
 	int[][] factorCount;
 	int primeIndex = 0;
 	int rValueCount = 0;
+	int duplicates = 0;
+	boolean solutionFound = false;
 
 	public BigInteger squareRoot(BigInteger x) {
 		BigInteger right = x, left = BigInteger.ZERO, mid;
@@ -30,171 +37,186 @@ public class QuadraticSieve {
 	}
 
 	public void run() {
-		long start = System.currentTimeMillis();
+		Scanner in = null;
 		try {
-			Scanner in = new Scanner(new File("prim_2_24.txt"));
+			in = new Scanner(new File("prim_2_24.txt"));
 			while (in.hasNext()) {
 				int prime = in.nextInt();
-				if (prime < L) {
+				if (prime < factorBase) {
 					F.add((Integer) prime);
-				}
+				} else
+					break;
 			}
-			in.close();
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
+		} finally {
+			in.close();
+
 		}
-		System.out.println(F);
-
-		factorCount = new int[L][F.size()];
-		// test selected numbers r = floor(sqrt(k * N)) + j for k=1,2,..
-		// j=1,2,..
-
-		// calculate r
-		// test r^2
-		// increment
-		// long r_limit = 10000000;
-
-		int chunk = 1000;
-		BigInteger N = new BigInteger("392742364277");
-		ArrayList<Long> rList = new ArrayList<Long>();
+		long start = System.currentTimeMillis();
 		long oldMax = 1;
 		long newMax = 1;
-		// set oldmax to 0; newmax = 0;
+		BigInteger N = new BigInteger("127423368713324519534591");//363297539873");
 
-		while (rValueCount < L) {
-			oldMax = newMax;
-			newMax += chunk;
-			// TODO: if k and j are large,change to bIGINTTT
-			for (long k = 1; k < newMax; k++) {
-				// calculate square of of k.N
-				BigInteger newK = new BigInteger(((Long) k).toString());
-				BigInteger firstTerm = squareRoot(N.multiply(newK));
-				for (long j = oldMax; j < newMax; j++) {
+		while (!solutionFound) {
+			rValueCount = 0;
+			factorCount = new int[L][F.size()];
+			// test selected numbers r = floor(sqrt(k * N)) + j for k=1,2,..
+			// j=1,2,..
 
-					BigInteger r = firstTerm.add(new BigInteger(((Long) j).toString()));
-					BigInteger y = r.modPow(new BigInteger("2"), N);
-					// if y is b-smooth, add y to r list
-					if (isSmooth(F.size(), y)) {
-						rValueCount++;
-						rList.add(y.longValue());
-						if (rValueCount == L)
-							break;
+			// determines how much to increment k before switching to j
+			int chunk = 100;
+			ArrayList<Long> rList = new ArrayList<Long>();
+
+			// set oldmax to 0; newmax = 0;
+
+			while (rValueCount < L) {
+				oldMax = newMax;
+				newMax += chunk;
+				// System.out.println("I'm climbing left ladder");
+				for (long k = 1; k < newMax; k++) {
+					// calculate square of of k.N
+					BigInteger newK = BigInteger.valueOf(k);
+					BigInteger firstTerm = squareRoot(N.multiply(newK));
+					for (long j = oldMax; j < newMax; j++) {
+
+						BigInteger r = firstTerm.add(BigInteger.valueOf(j));
+						BigInteger y = r.modPow(new BigInteger("2"), N);
+						// System.out.println(r.toString() + " " +
+						// y.toString());
+						// if y is b-smooth, add y to r list
+						// System.out.println("Checking smoothness...");
+						// System.out.println(j + " " + k);
+						if (isSmooth(F.size(), y)) {
+							rValueCount++;
+							System.out.println("I've found an r " + rValueCount);
+							rList.add(r.longValue());
+							if (rValueCount == L)
+								break;
+						}
+						// System.out.println("Done.");
+						// System.out.println(j + " " + k);
+
 					}
-
+					if (rValueCount == L)
+						break;
 				}
 				if (rValueCount == L)
 					break;
+				// should do a check for size of list
+				// System.out.println("I'm climbing right ladder");
+				for (long k = 1; k < newMax; k++) {
+					BigInteger newK = BigInteger.valueOf(k);
+					BigInteger firstTerm = squareRoot(N.multiply(newK));
+					for (long j = 1; j < oldMax; j++) {
+						BigInteger r = firstTerm.add(BigInteger.valueOf(j));
+						BigInteger y = r.modPow(new BigInteger("2"), N);
+						// if y is b-smooth, add y to r list
+						if (isSmooth(F.size(), y)) {
+							rValueCount++;
+							System.out.println("I've found an R also " + rValueCount);
+							rList.add(r.longValue());
+							if (rValueCount == L)
+								break;
+						}
+						// System.out.println(j + " " + k);
+					}
+					if (rValueCount == L)
+						break;
+				}
+
 			}
-			if (rValueCount == L)
-				break;
-			// should do a check for size of list
-			for (long k = 1; k < newMax; k++) {
-				BigInteger newK = new BigInteger(((Long) k).toString());
-				BigInteger firstTerm = squareRoot(N.multiply(newK));
-				for (long j = 1; j < oldMax; j++) {
-					BigInteger r = firstTerm.add(new BigInteger(((Long) j).toString()));
-					BigInteger y = r.modPow(new BigInteger("2"), N);
-					// if y is b-smooth, add y to r list
-					if (isSmooth(F.size(), y)) {
-						rValueCount++;
-						rList.add(y.longValue());
-						if (rValueCount == L)
-							break;
+			// Build the input file for the gaussian elimination .exe
+			StringBuffer b = new StringBuffer("");
+			b.append(L + " " + F.size() + "\n");
+			for (int i = 0; i < factorCount.length; i++) {
+				for (int j = 0; j < factorCount[0].length; j++) {
+					b.append(factorCount[i][j]);
+					if (j == factorCount[0].length - 1)
+						b.append("\n");
+					else
+						b.append(" ");
+				}
+			}
+			BufferedWriter bw = null;
+			try {
+
+				bw = new BufferedWriter(new FileWriter("output.txt"));
+				bw.write(b.toString());
+				bw.close();
+				System.out.println("Generated factor matrix.");
+				ProcessBuilder pb = new ProcessBuilder("GaussBin.exe", "output.txt", "binMat.txt");
+				Process p = pb.start();
+				p.waitFor();
+				System.out.println("Executed GaussBin.exe.");
+			} catch (IOException e) {
+				e.printStackTrace();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			Scanner reader = null;
+			try {
+				File f = new File("binMat.txt");
+				reader = new Scanner(f);
+			} catch (FileNotFoundException e) {
+				e.printStackTrace();
+			}
+			int numSolutions = Integer.parseInt(reader.nextLine());
+			System.out.println("Number of potential solutions: " + numSolutions);
+			// int solutionsTried = 0;
+			BigInteger[] solution = new BigInteger[2];
+
+			// Go through and check all solution rows in matrix
+			while (reader.hasNextLine()) {
+				String[] vals = reader.nextLine().split(" ");
+				BigInteger RHS = BigInteger.ONE;
+				BigInteger LHS = BigInteger.ONE;
+				int[] totalFactors = new int[F.size()];
+				for (int i = 0; i < vals.length; i++) {
+					if (vals[i].equals("1")) {
+						// add current row of factors into the total
+						for (int k = 0; k < factorCount[i].length; k++) {
+							totalFactors[k] += factorCount[i][k];
+						}
+						// multiply in the current prime raised to the power
+						LHS = LHS.multiply( BigInteger.valueOf( rList.get(i) ) ).mod(N);
 					}
 				}
-				if (rValueCount == L)
+				for (int k = 0; k < totalFactors.length; k++) {
+					// since we have all even exponents, and the resulting
+					// equation
+					// need not be squared
+					// we can divide all exponents in half to remove a factor of
+					// 2
+					int power = totalFactors[k] / 2;
+					RHS = RHS.multiply( BigInteger.valueOf( F.get(k) ).pow(power) ).mod(N);
+
+				}
+				// System.out.println("LHS: " + LHS + "\nRHS: " + RHS);
+				// System.out.println("Tried: " + ++solutionsTried);
+
+				// Calculate gcd and extract factors of N
+				BigInteger gcd = N.gcd(RHS.subtract(LHS));
+				System.out.println("GCD: " + gcd + " RHS: "+ RHS + " LHS: " + LHS);
+				if (!gcd.equals(BigInteger.ONE) && !RHS.equals(LHS)) {
+					//There is a bandage here where if they are somehow equal, don't have solution
+					//but we don't know why they would be equal
+					solution[0] = gcd;
+					solution[1] = N.divide(gcd);
+					solutionFound = true;
 					break;
-			}
-
-		}
-		StringBuffer b = new StringBuffer("");
-		b.append(L + " " + F.size() + "\n");
-		for (int i = 0; i < factorCount.length; i++) {
-			for (int j = 0; j < factorCount[0].length; j++) {
-				b.append(factorCount[i][j]);
-				if (j == factorCount[0].length - 1)
-					b.append("\n");
-				else
-					b.append(" ");
-			}
-		}
-		// System.out.println("output string: " + b);
-		BufferedWriter bw = null;
-		try {
-
-			bw = new BufferedWriter(new FileWriter("output.txt"));
-			bw.write(b.toString());
-			bw.close();
-			System.out.println("Generated factor matrix.");
-			ProcessBuilder pb = new ProcessBuilder("GaussBin.exe", "output.txt", "binMat.txt");
-			Process p = pb.start();
-			p.waitFor();
-			System.out.println("Executed GaussBin.exe.");
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		Scanner reader = null;
-		try {
-			File f = new File("binMat.txt");
-			reader = new Scanner(f);
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		}
-		int numSolutions = Integer.parseInt(reader.nextLine());
-		System.out.println(numSolutions);
-		int solutionsTried = 0;
-		long[] solution = new long[2];
-		boolean solutionFound = false;
-
-		while (solutionsTried < numSolutions) {
-			System.out.println("Tried: " + solutionsTried);
-			String[] vals = reader.nextLine().split(" ");
-			BigInteger RHS = BigInteger.ONE;
-			BigInteger LHS = BigInteger.ONE;
-			int[] totalFactors = new int[F.size()];
-			for (int i = 0; i < vals.length; i++) {
-				if (vals[i].equals("1")) {
-					// add current row of factors into the total
-					for (int k = 0; k < factorCount[i].length; k++) {
-						totalFactors[k] += factorCount[i][k];
-					}
-					// multiply in the current prime raised to the power
-					LHS = LHS.multiply(BigInteger.valueOf(rList.get(i))).mod(N);
 				}
 			}
-			System.out.println();
-			for (int k = 0; k < totalFactors.length; k++) {
-				int power = totalFactors[k]/2;//totalFactors[k] % 2 == 0 ? totalFactors[k] / 2 : totalFactors[k];
-				System.out.printf(power + " ");
-				RHS = RHS.multiply(BigInteger.valueOf(F.get(k)).pow(power)).mod(N);
-				
-			}
-			System.out.println();
-			System.out.println("LHS: " + LHS + "\nRHS: " + RHS);
 
-			// calculate gcd
-			long gcd = N.gcd(LHS.subtract(RHS)).intValue();
-			if (gcd != 1) {
-				solution[0] = gcd;
-				solution[1] = N.divide(BigInteger.valueOf(gcd)).intValue();
-				solutionFound = true;
-				break;
-			}
-			solutionsTried++;
+			System.out.println("Duplicate binary rows: " + duplicates);
+
+			if (!solutionFound)
+				System.out.println("No Solution Found. :(");
+			else
+				System.out.printf("The factors of %s are %d and %d\n", N.toString(), solution[0], solution[1]);
+			reader.close();
 		}
-		if(!solutionFound)
-			System.out.println("No Solution Found. :(");
-		else
-			System.out.printf("The factors of %s are %d and %d\n",N.toString(), solution[0], solution[1] );
-		//
-		reader.close();
-
-		// output to file here
-		// current += chunk;
-		System.out.println("Time taken: " + (System.currentTimeMillis() - start) / 1000 + "s");
+		System.out.println("Time taken: " + (System.currentTimeMillis() - start) / 1000.0 + "s");
 	}
 
 	/**
@@ -206,40 +228,48 @@ public class QuadraticSieve {
 	 * @return
 	 */
 	public boolean isSmooth(int B, BigInteger y) {
-		//System.out.println("smooth criminal");
+		// While number is divisible by prime factors, fill up array
+		int[] currentRow = new int[factorCount[0].length];
+		StringBuilder row = new StringBuilder();
 
-		// while number is divisible by prime factors, fill up array
 		for (int j = 0; j < F.size(); j++) {
-			Integer currentPrime = F.get(j);
-			BigInteger divisor = new BigInteger(currentPrime.toString());
+			BigInteger divisor = new BigInteger(F.get(j).toString());
+			// temp var to keep track of total powers of current prime
+			int count = 0;
 			// is y divisible by the current prime factor
-			while (y.remainder(divisor).intValue() == 0) {
-				factorCount[rValueCount][j]++;
+			while (y.remainder(divisor).equals(BigInteger.ZERO)) {
+				count++;
 				y = y.divide(divisor);
-				//System.out.println("current y: " + y);
+
 			}
-			if (y.intValue() != 1) {
+			currentRow[j] = count;
+			row.append(count % 2);
+
+			if (!y.equals(BigInteger.ONE)) {
 				if (j == F.size() - 1) {
-					/*
-					 * reached the end of F and didnt find a factorization, so
-					 * reset factor array and return false
-					 */
-					for (int i = 0; i < factorCount[rValueCount].length; i++) {
-						factorCount[rValueCount][(int) i] = 0;
-					}
+					// reached the end of F and didnt find a factorization, so
+					// return false
 					return false;
 				}
-
+				// Check hash for duplicate
 			} else {
-				// rValueCount++;
-				System.out.println("Added an r-value. Count: " + rValueCount + "***************************************************************");
-				return true;
+				if (M.add(row.toString())) {
+					// Row was not duplicate and is also B-smooth
+					// add to factor array
+					for (int i = 0; i < currentRow.length; i++) {
+						factorCount[rValueCount][i] = currentRow[i];
+					}
+
+					return true;
+					
+				} else {
+					// Y factors within our factorbase
+					duplicates++;
+
+					return false;
+				}
 			}
-
 		}
-
-		// if the remainder is prime outside of F, reset array
-
 		return false;
 
 	}
