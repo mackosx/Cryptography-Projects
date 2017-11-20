@@ -12,11 +12,13 @@ public class QuadraticSieve {
 	// L = 2^10
 	int L = (int) Math.pow(2, 10);
 	int factorBase = L - 5;
+	
 	// Factor base containing all primes we need
 	ArrayList<Integer> F = new ArrayList<Integer>();
 	// Hash for keeping track of duplicates
 	HashSet<String> M = new HashSet<String>();
-	long[] rList = new long[L];
+	
+	BigInteger[] rList = new BigInteger[L];
 
 	int[][] factorCount;
 	int rValueCount = 0;
@@ -36,6 +38,7 @@ public class QuadraticSieve {
 	}
 	
 	public void run() {
+		L = 300;
 		Scanner in = null;
 		try {
 			in = new Scanner(new File("prim_2_24.txt"));
@@ -57,22 +60,29 @@ public class QuadraticSieve {
 
 		rValueCount = 0;
 		factorCount = new int[L][F.size()];
-
+		// Build up array of r values
+		int sum = 0;
+		int totalTime = 0;
 		for (long k = 1; rValueCount < L; k++) {
 			// Calculate the floor(sqrt(k*N)) term, then increment j and add
 			BigInteger firstTerm = squareRoot(N.multiply(BigInteger.valueOf(k)));
-			for (long j = 1; j < k && rValueCount < L; j++) {
+			long s2 = System.currentTimeMillis();
+			for (long j = 1; j < k*2 && rValueCount < L; j++) {
 
 				BigInteger r = firstTerm.add(BigInteger.valueOf(j));
-				BigInteger y = r.modPow(new BigInteger("2"), N);
 				// if y is b-smooth, add y to r list
-				if (isSmooth(F, y)) {
+				long s = System.currentTimeMillis();
+				if (isSmooth(F, r, N)) {
 					rValueCount++;
 					System.out.printf("I've found an r %d at j=%d and k=%d, diff=%d\n", rValueCount, j, k,
 							Math.abs(j - k));
-					rList[rValueCount - 1] = r.longValue();
+					rList[rValueCount - 1] = r;
+
 				}
+				sum += (System.currentTimeMillis() - s);
+				
 			}
+			sum = 0;
 		}
 		// Build the input file for the gaussian elimination .exe
 		StringBuffer b = new StringBuffer("");
@@ -126,15 +136,14 @@ public class QuadraticSieve {
 						totalFactors[k] += factorCount[i][k];
 					}
 					// multiply in the current prime raised to the power
-					LHS = LHS.multiply(BigInteger.valueOf(rList[i])).mod(N);
+					LHS = LHS.multiply(rList[i]).mod(N);
 				}
 			}
 			for (int k = 0; k < totalFactors.length; k++) {
-				// since we have all even exponents, and the resulting
-				// equation
-				// need not be squared
-				// we can divide all exponents in half to remove a factor of
-				// 2
+				/* since we have all even exponents, and the resulting equation
+				* doesn't actually have to be squared
+				* we can divide all exponents in half to remove a factor of 2
+				*/
 				int power = totalFactors[k] / 2;
 				RHS = RHS.multiply(BigInteger.valueOf(F.get(k)).pow(power)).mod(N);
 
@@ -173,26 +182,28 @@ public class QuadraticSieve {
 	 *            the number to compute smoothness on
 	 * @return
 	 */
-	public boolean isSmooth(ArrayList<Integer> F, BigInteger y) {
+	public boolean isSmooth(ArrayList<Integer> F, BigInteger r, BigInteger N) {
 		// TODO: verify smooth method isnt problem
 		// While number is divisible by prime factors, fill up array
+		BigInteger y = r.pow(2).mod(N);
+
 		int[] currentRow = new int[factorCount[0].length];
-		StringBuilder row = new StringBuilder();
+		String row = "";
 
 		for (int j = 0; j < F.size(); j++) {
 			BigInteger divisor = BigInteger.valueOf(F.get(j));
-			// Only checking numbers up to and including B
 
 			// temp var to keep track of total powers of current prime
 			int count = 0;
 			// continue to divide y by prime while it has factors of the prime
-			while (y.remainder(divisor).equals(BigInteger.ZERO)) {
+			
+			while (y.mod(divisor).equals(BigInteger.ZERO)) {
 				count++;
 				y = y.divide(divisor);
 			}
 			currentRow[j] = count;
 			// Build binary string to add to hash
-			row.append(count % 2);
+			row += count % 2;
 
 			if (!y.equals(BigInteger.ONE)) {
 				if (j == F.size() - 1) {
