@@ -38,7 +38,7 @@ public class QuadraticSieve {
 	}
 	
 	public void run() {
-		L = 300;
+		//L = 300;
 		Scanner in = null;
 		try {
 			in = new Scanner(new File("prim_2_24.txt"));
@@ -61,29 +61,23 @@ public class QuadraticSieve {
 		rValueCount = 0;
 		factorCount = new int[L][F.size()];
 		// Build up array of r values
-		int sum = 0;
-		int totalTime = 0;
+		System.out.println("Calculating suitable r-values...");
 		for (long k = 1; rValueCount < L; k++) {
 			// Calculate the floor(sqrt(k*N)) term, then increment j and add
 			BigInteger firstTerm = squareRoot(N.multiply(BigInteger.valueOf(k)));
-			long s2 = System.currentTimeMillis();
 			for (long j = 1; j < k*2 && rValueCount < L; j++) {
 
 				BigInteger r = firstTerm.add(BigInteger.valueOf(j));
 				// if y is b-smooth, add y to r list
-				long s = System.currentTimeMillis();
 				if (isSmooth(F, r, N)) {
 					rValueCount++;
-					System.out.printf("I've found an r %d at j=%d and k=%d, diff=%d\n", rValueCount, j, k,
-							Math.abs(j - k));
 					rList[rValueCount - 1] = r;
 
 				}
-				sum += (System.currentTimeMillis() - s);
 				
 			}
-			sum = 0;
 		}
+		System.out.println("Done.");
 		// Build the input file for the gaussian elimination .exe
 		StringBuffer b = new StringBuffer("");
 		b.append(L + " " + F.size() + "\n");
@@ -183,7 +177,6 @@ public class QuadraticSieve {
 	 * @return
 	 */
 	public boolean isSmooth(ArrayList<Integer> F, BigInteger r, BigInteger N) {
-		// TODO: verify smooth method isnt problem
 		// While number is divisible by prime factors, fill up array
 		BigInteger y = r.pow(2).mod(N);
 
