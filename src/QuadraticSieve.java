@@ -70,8 +70,9 @@ public class QuadraticSieve {
 				BigInteger r = firstTerm.add(BigInteger.valueOf(j));
 				// if y is b-smooth, add y to r list
 				if (isSmooth(F, r, N)) {
+					rList[rValueCount] = r;
 					rValueCount++;
-					rList[rValueCount - 1] = r;
+
 
 				}
 				
