@@ -13,10 +13,11 @@ public class CorrelationAttack {
 			{ 0, 1, 0, 1, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 1 } };
 
 	double[] pStarValues;
+	LinkedList<LinkedList<Double>> duplicates = new LinkedList<>();
 	String[] correctStates;
 	int currentState = 0;
 	int[][] correctSequences;
-
+	int[] duplicate;
 	int hammingDistance(int[] u, int[] z) {
 		int N = z.length;
 		int numDiff = 0;
@@ -28,7 +29,7 @@ public class CorrelationAttack {
 
 	}
 
-	// calculates the correlation between two binary sequences
+	// calculates the correlation between two binary sequences using hamming distance
 	double correlation(int hamming, int N) {
 		return 1.0 - (hamming / (double) N);
 	}
@@ -63,33 +64,41 @@ public class CorrelationAttack {
 		return s;
 	}
 
-	boolean check(int[][] seqs, int N, String z) {
-		// geneerate the keystream sequence from our key
+	boolean check(int[][] seqs, int N, String z, int[] zCheck) {
+		// generate the keystream sequence from our selected initial states
 		String ourKeyStreamMMM = "";
-
+		int[] stream = new int[N];
 		for (int i = 0; i < N; i++) {
 			int zeroes = 0;
 			int ones = 0;
-			if (seqs[0][i] == 1)
+			
+			if (duplicate[i] == 1)
 				ones++;
 			else
 				zeroes++;
+			
 			if (seqs[1][i] == 1)
 				ones++;
 			else
 				zeroes++;
+			
 			if (seqs[2][i] == 1)
 				ones++;
 			else
 				zeroes++;
-
-			if (zeroes > ones)
+			
+			// majority logic
+			if (zeroes > ones){
 				ourKeyStreamMMM = ourKeyStreamMMM + "0";
-			else
+			} else {
 				ourKeyStreamMMM = ourKeyStreamMMM + "1";
+				stream[i] = 1;
+
+			}
 		}
-		System.out.println(z);
-		System.out.println(ourKeyStreamMMM);
+		System.out.println("Actual output: \n" + z);
+		System.out.println("Our output: \n"+ourKeyStreamMMM);
+		System.out.println("Correlation: \t"+correlation(hammingDistance(zCheck, stream), N));
 		if (ourKeyStreamMMM.equals(z))
 			return true;
 		else
@@ -98,6 +107,11 @@ public class CorrelationAttack {
 	}
 
 	void attack(String key) {
+		duplicates.add(new LinkedList<Double>());
+		duplicates.add(new LinkedList<Double>());
+		duplicates.add(new LinkedList<Double>());
+
+		System.out.println("Beginning attack...");
 		int N = key.length();
 		correctStates = new String[c.length];
 		pStarValues = new double[c.length];
@@ -114,7 +128,7 @@ public class CorrelationAttack {
 			// check that the binary is maximum all ones the length of Ci
 			while (Integer.toBinaryString(currentState).length() <= c[i].length) {
 				String current = Integer.toBinaryString(currentState);
-				System.out.println(current);
+				//System.out.println(current);
 
 				int[] u0 = new int[c[i].length];
 				// start at right side of array and fill up with binary and left
@@ -123,24 +137,30 @@ public class CorrelationAttack {
 					u0[j - 1] = Character.getNumericValue(current.charAt(u0.length - j));
 				}
 				// calculate p*
-				int[] test = new int[13];
+				//int[] test = new int[13];
 				int[] u = sequence(u0, N, c[i]);
 				double pStar = correlation(hammingDistance(u, z), N);
 
-				if(Arrays.equals(test, u0)){
-					for (int j = 0; j < u.length; j++) {
-						System.out.print(u[i]);
-					}
-					System.out.println();
-					System.out.println(pStar);
-					System.out.println(hammingDistance(u, z));
-					//break;
-				}
+//				if(Arrays.equals(test, u0)){
+//					for (int j = 0; j < u.length; j++) {
+//						System.out.print(u[i]);
+//					}
+//					System.out.println();
+//					System.out.println(pStar);
+//					System.out.println(hammingDistance(u, z));
+//					//break;
+//				}
 				
 
-				System.out.println(pStar);
+				//System.out.println(pStar);
 //finding furthest pstar?
-				if (Math.abs(pStar - 0.5) > Math.abs(pStarValues[i] - 0.5)) {
+//				if(pStar>0.65){
+//					System.out.println("\n"+pStar);
+//					System.out.println(pStarValues[i]+"\n");
+//				}
+		
+				if (Math.abs(0.5 - pStar) > Math.abs(0.5 - pStarValues[i])) {
+					duplicates.get(i).clear();
 					pStarValues[i] = pStar;
 					correctSequences[i] = u;
 					String init = "";
@@ -149,30 +169,45 @@ public class CorrelationAttack {
 					}
 					correctStates[i] = init;
 
+				} else if(Math.abs(0.5 - pStar) == Math.abs(0.5 - pStarValues[i])){
+					duplicates.get(i).add(pStar);
+					duplicate = u;
 				}
 
 				currentState++;
 			}
+			currentState = 0;
 		}
-		System.out.println();
+		System.out.println("Attack complete.");
 		System.out.println(pStarValues[0]);
 		System.out.println(correctStates[0]);
 
-//		for (int i = 0; i < correctSequences[0].length; i++) {
-//			System.out.print(correctSequences[0][i]);
-//
-//		}
-		System.out.println();
+		printArray(correctSequences[0]);
+
 		System.out.println(pStarValues[1]);
 		System.out.println(correctStates[1]);
+		
+		printArray(correctSequences[1]);
 
 		System.out.println(pStarValues[2]);
 		System.out.println(correctStates[2]);
-		if(check(correctSequences, N, key))
+		
+		printArray(correctSequences[2]);
+
+		if(check(correctSequences, N, key, z))
 			System.out.println("WOOHOOO");
 		else
 			System.out.println("SACREBLEU");
 
+		//printArray(duplicate);
+
+	}
+	// Helper method
+	void printArray(int[] a){
+		for (int i = 0; i < a.length; i++) {
+			System.out.print(a[i]);
+		}
+		System.out.println();
 	}
 
 	public static void main(String[] args) {
